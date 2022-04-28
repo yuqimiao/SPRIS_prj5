@@ -1,0 +1,24 @@
+---
+title: "pres_draft_5"
+author: "Yuqi Miao ym2771"
+date: "4/27/2022"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+* A pharmaceutical company therefore would like to conduct a phase III randomized (**1-to-1 ratio**), **stratified**, observer-blinded, placebo-controlled trial at **100 U.S. sites** to demonstrate the efficacy for their developing vaccine. 
+
+* Define primary outcome
+
+  * $$
+    VE = 1-\frac{p_1}{p_2}
+    $$
+
+    * $p_i$ : proportion(attack rate) at 14 days after second injection in group i
+    * $x_i$ cases in group i with $n_i$ samples
+
+
