@@ -1,24 +1,158 @@
 ---
-title: "pres_draft_5"
-author: "Yuqi Miao ym2771"
-date: "4/27/2022"
-output: ioslides_presentation
+title: |
+  | P9185 - Project 5: 
+  | Protocal design and analysis for COVID-19
+author: |
+  | Yuqi Miao, Zexi Cai
+date: "2022-05-02"
+output:
+  beamer_presentation:
+    theme: "Madrid"
+    fonttheme: "structurebold"
+    incremental: false
+    latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(glmmTMB)
+library(tidyverse)
+library(readxl)
+library(flexsurv)
 ```
 
+# Outline
+
+* Vaccine efficacy protocal
+* Adverse effect analysis for Vaccine v.s. Control
+* Survival analysis COVID contraction after vaccine shot
+
+# Backgroud
+
+* Coronavirus, the severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2), has had devastating consequences globally. 
+
+* Control measures, such as the use of masks, have been variably implemented and have proved insufficient in impeding the spread of coronavirus disease 2019 (Covid-19), the disease caused by SARS-CoV-2. 
+
+* Vaccines are urgently needed to reduce the morbidity and mortality associated with Covid-19. 
+
+# Vaccine efficacy protocal
 
 * A pharmaceutical company therefore would like to conduct a phase III randomized (**1-to-1 ratio**), **stratified**, observer-blinded, placebo-controlled trial at **100 U.S. sites** to demonstrate the efficacy for their developing vaccine. 
 
-* Define primary outcome
+## Define primary outcome
 
-  * $$
+$$
     VE = 1-\frac{p_1}{p_2}
-    $$
+$$
 
-    * $p_i$ : proportion(attack rate) at 14 days after second injection in group i
-    * $x_i$ cases in group i with $n_i$ samples
+* $p_i$ : the number of new cases during 14-28 days over the total number at risk during 14-28 days in group i
+* $x_i$ cases in group i with $n_i$ samples
+
+* Goal: test the null hypothesis that the vaccine efficacy is 30% or less and provide 80% power to detect a 60% vaccine efficacy without planned interim analyses
+
+# Vaccine efficacy protocal -- randomization procedure
+
+* The study consists of **2 periods** :
+  * vaccine period for 2 injections
+  * follow up period: 
+    * second injection - 14 days: if the subjects have symptoms/being positive at this period, regard as not at risk and will not contribute to the efficacy calculation
+    * 14-28 days: follow up period,
+    
+# Vaccine efficacy protocal -- randomization procedure
+
+* collect study subjects with seronegative at baseline $N_0$
+* take 2 covid shots 
+* collect status at day 14 after second shot
+* remove those becoming positive during the 14 days
+* Count new cases during 14-28 days
+
+# Vaccine efficacy protocal -- randomization procedure
+
+* Blinding and Randomization procedure
+  * The primary blind codes are the group codes, and each vaccine number is the investigational vaccine or control vaccine corresponding to the research number, which is represented by different letters. 
+  * The secondary blind codes will uncover the final blind codes, i.e. the vaccine name represented by letters, and the low-dose, medium-dose and high-dose investigational vaccine or control vaccine.
+  * Use random number generating process in R(?) to generate random codes 
+*  A stratified block randomization method was used, with study site as the stratification factor and block size in each stratum of 15. 
+
+# Vaccine efficacy protocal -- analysis approach
+
+* $H_0:VE\leq30\%, H_1: VE>30\%$
+* parameters:
+* Test stat: 
+
+$$
+Z_L=(\log\hat R-\log R_0)/ \hat \sigma \sim N(0,1)
+$$
+* Rejection rule: [add]
+
+# Vaccine efficacy protocal -- sample size calculation
+
+$$
+N=(Z_\alpha+Z_\beta)^2\frac{q_1/kp_1+q_2/(1-k)p_2}{(\log R_0-\log R)^2}
+$$
+
+```{r}
+load("sens_samp_tib.Rdata")
+knitr::kable(sens_samp_tib, type = "latex")
+```
 
 
+# Adverse effect analysis for Vaccine v.s. Control
+
+![](Descrip_table.png)
+
+# Adverse effect analysis for Vaccine v.s. Control
+
+```{r}
+load("md_pattern.Rdata")
+knitr::kable(md_pattern, caption = "Missing Data Pattern")
+```
+
+
+# Adverse effect analysis for Vaccine v.s. Control
+
+$$
+\begin{aligned}
+logit(\frac{\pi_{ijk}}{1-\pi_{ijk}})&=\beta_0 \\
+&+\beta_1I(\text{time}==2)_{ijk}+\beta_1I(\text{time}==3)_{ijk} \\
+&+\beta_3I(\text{time}==1)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
+&+\beta_4I(\text{time}==2)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
+&+\beta_5I(\text{time}==3)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
+&+\beta_6I(\text{sex}==\text{male})_{ij} \\
+&+\beta_7 \text{age}_{ij}\\
+&+\alpha_{0i}+\alpha_{0ij}+\epsilon_{ijk}
+\end{aligned}
+$$
+
+* i for site, j for subject, k for time measure
+
+# Adverse effect analysis for Vaccine v.s. Control
+
+```{r}
+load("mod_list.Rdata")
+texreg::texreg(mod_list)
+```
+
+* Conclusion?
+
+# Survival analysis COVID contraction after vaccine shot
+
+```{r}
+surv_data = readxl::read_excel("Q2c.xlsx") %>% 
+  janitor::clean_names()
+
+exp1 <- flexsurvreg(Surv(last_fu_time, infection) ~ 1,
+                    data = surv_data,
+                    dist = "exp")  # S(t)=e^{-rate*t} 
+plot(exp1, xlab = "Last FU time", ylab = "survival probability",
+    main = "KM and exponential estimates of survival curve")
+
+KM1=survfit(Surv(last_fu_time, infection)~1, data = surv_data, conf.type='log')
+plot(KM1, conf.int = T, mark.time = TRUE,xlab="Last fu time", ylab="survival probability", main="K-M curve", cex.lab=1.5, cex.main=1.5)
+```
+
+# Survival analysis COVID contraction after vaccine shot
+
+# Survival analysis COVID contraction after vaccine shot
+
+# Conclusion and discussion
