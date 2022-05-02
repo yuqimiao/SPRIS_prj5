@@ -19,6 +19,16 @@ library(glmmTMB)
 library(tidyverse)
 library(readxl)
 library(flexsurv)
+data= readxl::read_excel("Q2b.xlsx")
+baseline = readxl::read_excel("Q2b_BL.xlsx")
+data_all = left_join(data, baseline, by = "ID") %>% 
+  janitor::clean_names() %>% 
+  mutate(time = factor(time),
+         sex = factor(sex, level = c(0,1),
+                      label = c("female","male")),
+         group = factor(group, levels = c(0,1),
+                        labels = c("control", "vaccine"))
+         ) 
 ```
 
 # Outline
@@ -103,10 +113,51 @@ knitr::kable(sens_samp_tib, type = "latex")
 
 # Adverse effect analysis for Vaccine v.s. Control
 
+```{r echo=FALSE, fig.height=6, message=FALSE, warning=FALSE}
+data_all %>% 
+  mutate(age_group = cut(age,3)) %>% 
+  group_by(sex, age_group, group, time) %>% 
+  summarize(mean_sae = mean(sae, na.rm = T)) %>% 
+  ggplot(aes(x = time, y = mean_sae, fill = group))+
+  geom_bar(stat = "identity", position = "dodge")+
+  facet_grid(sex~age_group)+
+  labs(title = "Mean SAE across time by sex and age group")
+```
+
+
+# Adverse effect analysis for Vaccine v.s. Control
+
 ```{r}
 load("md_pattern.Rdata")
 knitr::kable(md_pattern, caption = "Missing Data Pattern")
+
+# load("missing_glm.Rdata")
+# texreg::texreg(missing_glm, caption = "missing_id~sae+sex+age+site")
 ```
+
+# Adverse effect analysis for Vaccine v.s. Control -- missing pattern
+
+GLM: missing_id ~ sae+sex+age+site+time
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrrr}
+  \hline
+ & Estimate & Std. Error & z value & Pr($>$$|$z$|$) \\ 
+  \hline
+(Intercept) & -1.1853 & 0.0372 & -31.83 & 0.0000 \\ 
+  sae & 0.0731 & 0.1917 & 0.38 & 0.7030 \\ 
+  sexmale & -0.0046 & 0.0155 & -0.30 & 0.7645 \\ 
+  age & -0.0023 & 0.0007 & -3.23 & 0.0013 \\ 
+  site & -0.0003 & 0.0003 & -1.02 & 0.3093 \\ 
+  time2 & -0.1826 & 0.0182 & -10.01 & 0.0000 \\ 
+  time3 & -0.4402 & 0.0194 & -22.71 & 0.0000 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+* Missing pattern is not related to the outcome;
+* Assuming Missing at random and parameter separability;
 
 
 # Adverse effect analysis for Vaccine v.s. Control
@@ -120,38 +171,132 @@ logit(\frac{\pi_{ijk}}{1-\pi_{ijk}})&=\beta_0 \\
 &+\beta_5I(\text{time}==3)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
 &+\beta_6I(\text{sex}==\text{male})_{ij} \\
 &+\beta_7 \text{age}_{ij}\\
-&+\alpha_{0i}+\alpha_{0ij}+\epsilon_{ijk}
+&+\alpha_{0i}+\alpha_{1ij}+\epsilon_{ijk}
 \end{aligned}
 $$
 
-* i for site, j for subject, k for time measure
+* $i$ for site, $j$ for subject, $k$ for time measure
+* $\alpha_{0i}$ -- site-level random intercept
+* $\alpha_{1ij}$ -- nested random intercept, $\alpha_{1ij}=\alpha_{1ik}$ if $I(\text{group} == \text{Vaccine})_{ij}=I(\text{group} == \text{Vaccine})_{ik}$
+
 
 # Adverse effect analysis for Vaccine v.s. Control
 
-```{r}
-load("mod_list.Rdata")
-texreg::texreg(mod_list)
+```{r, include = F}
+load("fit2.Rdata")
+# xtable::xtable(car::Anova(fit2))
+
+# ss <- summary(fit2)
+# ## print table; add space,
+# pxt <- function(x,title) {
+#   cat(sprintf("{\n\n\\textbf{%s}\n\\ \\\\\\vspace{2pt}\\ \\\\\n",title))
+#   print(xtable(x), floating=FALSE); cat("\n\n")
+#   cat("\\ \\\\\\vspace{5pt}\\ \\\\\n")
+# }
+# 
+# pxt(coef(ss)$cond,"conditional fixed effects")
 ```
 
-* Conclusion?
+\begin{tabular}{rrrrr}
+  \hline
+ & Estimate & Std. Error & z value & Pr($>$$|$z$|$) \\ 
+  \hline
+(Intercept) & -7.38 & 0.39 & -19.08 & 0.00 \\ 
+  time2 & 0.06 & 0.28 & 0.21 & 0.83 \\ 
+  time3 & 0.19 & 0.27 & 0.70 & 0.48 \\ 
+  sexmale & -0.10 & 0.15 & -0.64 & 0.52 \\ 
+  age & 0.01 & 0.01 & 2.09 & 0.04 \\ 
+  time1:groupvaccine & 0.47 & 0.27 & 1.76 & 0.08 \\ 
+  time2:groupvaccine & 0.32 & 0.27 & 1.17 & 0.24 \\ 
+  time3:groupvaccine & 0.04 & 0.28 & 0.15 & 0.88 \\ 
+   \hline
+\end{tabular}
+
+# Adverse effect analysis -- ANOVA for time effect
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrr}
+  \hline
+ & Chisq & Df & Pr($>$Chisq) \\ 
+  \hline
+time & 0.12 & 2 & 0.9399 \\ 
+  sex & 0.41 & 1 & 0.5206 \\ 
+  age & 4.36 & 1 & 0.0368 \\ 
+  time:group & 4.28 & 3 & 0.2329 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+* There is no siginificant difference between odds of having SAE in the vaccine group and control group at any of the three assessment time points.  
 
 # Survival analysis COVID contraction after vaccine shot
 
-```{r}
+```{r echo=FALSE, fig.height=4, message=FALSE, warning=FALSE}
 surv_data = readxl::read_excel("Q2c.xlsx") %>% 
   janitor::clean_names()
 
-exp1 <- flexsurvreg(Surv(last_fu_time, infection) ~ 1,
+par(mfrow = c(1,2))
+exp1 <- flexsurvreg(Surv(enrollment_time,last_fu_time, infection) ~ 1,
                     data = surv_data,
                     dist = "exp")  # S(t)=e^{-rate*t} 
-plot(exp1, xlab = "Last FU time", ylab = "survival probability",
-    main = "KM and exponential estimates of survival curve")
+weib1 <- flexsurvreg(Surv(enrollment_time, last_fu_time, infection) ~ 1,
+                    data = surv_data,
+                    dist = "weibull") 
+plot(exp1, xlab = "Last FU time", 
+     ylab = "survival probability",
+     main = "KM and exponential estimates of survival curve")
 
-KM1=survfit(Surv(last_fu_time, infection)~1, data = surv_data, conf.type='log')
-plot(KM1, conf.int = T, mark.time = TRUE,xlab="Last fu time", ylab="survival probability", main="K-M curve", cex.lab=1.5, cex.main=1.5)
+plot(weib1, xlab = "Last FU time", 
+     ylab = "survival probability",
+     main = "KM and Weibull estimates of survival curve")
+
 ```
 
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrrrrrr}
+  \hline
+ & time & n.risk & n.event & surv & std.err & lower & upper \\ 
+  \hline
+1 & 360.00 & 1399.00 & 177.00 & 0.90 & 0.01 & 0.89 & 0.92 \\ 
+   \hline
+\end{tabular}
+\caption{Survival Rate at 12 Month}
+\end{table}
+
 # Survival analysis COVID contraction after vaccine shot
+
+```{r}
+# median_tib = as_tibble(rbind(unclass(exp1_sum)[[1]],
+#                 unclass(weib1_sum)[[1]],
+#                 rep(NA,4))) %>% 
+#   select(-quantile) %>% 
+#   mutate(par_fitting = c("Exponential","Weibull","K-M")) %>% 
+#   select(par_fitting, everything())
+# 
+# xtable(median_tib)
+```
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rlrrr}
+  \hline
+ & par\_fitting & est & lcl & ucl \\ 
+  \hline
+1 & Exponential & 974.17 & 892.32 & 1075.15 \\ 
+  2 & Weibull & 974.17 & 892.71 & 1068.79 \\ 
+  3 & K-M &  &  &  \\ 
+   \hline
+\end{tabular}
+\caption{Estimated Median Survival Time}
+\end{table}
+
+* The survival rate didn't drop to 50% at the end of the study.
+* Flat tail of the survival curv, both exponential and Weibull distribution can't fit the trend well.
+* Not interpretable parametric model fitting.
+
+
 
 # Survival analysis COVID contraction after vaccine shot
 

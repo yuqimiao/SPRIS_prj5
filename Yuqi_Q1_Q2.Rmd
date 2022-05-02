@@ -14,6 +14,7 @@ library(xlsx)
 library(gtsummary)
 library(mice)
 library(flexsurv)
+library(xtable)
 data= readxl::read_excel("Q2b.xlsx")
 baseline = readxl::read_excel("Q2b_BL.xlsx")
 data_all = left_join(data, baseline, by = "ID") %>% 
@@ -32,7 +33,9 @@ data_spread = data_all %>%
               )
 ```
 
-# Descriptive table
+# Q2: 
+
+## Descriptive table
 
 ```{r}
 table1 = data_all %>% 
@@ -40,11 +43,9 @@ table1 = data_all %>%
   select(-time) %>% 
   tbl_summary(by = group) %>% 
   add_p()
-
-
 ```
 
-# Missing pattern
+## Missing pattern
 
 ```{r}
 data_spread_tmp = data_spread %>% 
@@ -82,16 +83,29 @@ summary(lm(missing_id~sae,data = data_all_mis))
 summary(lm(missing_id~sex,data = data_all_mis)) 
 summary(lm(missing_id~age, data = data_all_mis)) 
 # lower age tend to missing more
-summary(lm(missing_id~site,data = data_all_mis)) 
-
+summary(lm(missing_id~site,data = data_all_mis))
 ```
 
-# Data pattern
+GLM for missing pattern
+```{r}
+missing_glm = glm(missing_id~sae+sex+age+site+time, 
+                  data = data_all_mis,
+                  family=binomial(link='logit'),
+                  na.action = na.omit)
+
+summary(missing_glm)
+save(missing_glm, file = "missing_glm.Rdata")
+texreg::texreg(missing_glm, caption = "missing_id~sae+sex+age+site")
+
+xtable(missing_glm)
+```
+
+## Data visualization
 
 ```{r}
 data_all %>% 
   mutate(age_group = cut(age,3)) %>% 
-  group_by(sex, age, group, time) %>% 
+  group_by(sex, age_group, group, time) %>% 
   summarize(mean_sae = mean(sae, na.rm = T)) %>% 
   ggplot(aes(x = time, y = mean_sae, fill = group))+
   geom_bar(stat = "identity", position = "dodge")+
@@ -106,7 +120,7 @@ data_all %>%
 ```
 
 
-# lmm
+## GLM for prior fitting
 
 ```{r}
 # fit1 = glmer(sae~time:group+time+sex+age+(1|site/id), data = data_all,family = binomial, na.action = na.omit)
@@ -124,22 +138,49 @@ data_all %>%
 
 
 ```{r}
-# fit1 = glm(sae~time:group+time+sex+age,
-#            data = data_all,
-#            family=binomial(link='logit'),
-#            na.action = na.omit)
+fit1 = glm(sae~time:group+time+sex+age,
+           data = data_all,
+           family=binomial(link='logit'),
+           na.action = na.omit)
+summary(fit1)
+```
+
+## [result] using glmmTMB
+```{r}
+library(glmmTMB)
+# fit1 = glmmTMB(sae~time:group+time+sex+age+(1|site/id), data = data_all,family = binomial, na.action = na.omit)
+# # save(fit1, file = "fit1.Rdata")
+# # load("fit1.Rdata")
+# # fixef(fit1)
 # summary(fit1)
 ```
 
 ```{r}
-library(glmmTMB)
-# fit1 = glmmTMB(sae~time:group+time+sex+age+(1|site/id), data = data_all,family = binomial, na.action = na.omit)
-# save(fit1, file = "fit1.Rdata")
-load("fit1.Rdata")
-summary(fit1)
+fit2 = glmmTMB(sae~time:group+time+sex+age+(1|site/group), 
+               data = data_all,
+               family = binomial, na.action = na.omit)
+summary(fit2)
+save(fit2, file = "fit2.Rdata")
 ```
 
-### PMM
+### Anova
+
+### Output plot and table
+
+```{r}
+ss <- summary(fit2)
+## print table; add space,
+pxt <- function(x,title) {
+  cat(sprintf("{\n\n\\textbf{%s}\n\\ \\\\\\vspace{2pt}\\ \\\\\n",title))
+  print(xtable(x), floating=FALSE); cat("\n\n")
+  cat("\\ \\\\\\vspace{5pt}\\ \\\\\n")
+}
+
+pxt(coef(ss)$cond,"conditional fixed effects")
+```
+
+
+## PMM
 
 ```{r}
 fit_pmm = data_all_mis %>% 
@@ -157,10 +198,37 @@ mod_list = list(mod_mis1 = fit_pmm$fit[[1]],
 
 save(mod_list, file = "mod_list.Rdata")
 
+load("mod_list.Rdata")
+summary(mod_list$mod_mis1)
+summary(mod_list$mod_mis0)
+summary(mod_list$mod_all)
 texreg::texreg(mod_list)
-
 ```
 
+
+
+
+```{r}
+fit_pmm = data_all_mis %>% 
+  nest(data = -missing_id) %>% 
+  arrange(missing_id = desc(missing_id)) %>% 
+  mutate(fit = map(data, function(data){
+    fit1 = glmer(sae~time:group+time+sex+age+(1|site/id),
+                 data = data,family = binomial, na.action = na.omit)
+    fit1
+  }))
+
+fit_all = lme4::glmer(sae~time:group+time+sex+age+(1|site/id), 
+                data = data_all,family = binomial, na.action = na.omit)
+
+mod_list = list(mod_mis1 = fit_pmm$fit[[1]],
+                mod_mis0 = fit_pmm$fit[[2]],
+                mod_all = fit1)
+
+summary(mod_list$mod_mis1)
+summary(mod_list$mod_mis0)
+summary(mod_list$mod_all)
+```
 
 
 
@@ -192,7 +260,7 @@ N2 = N2*(1+(50-1)*rho)*(1/(1-lambda))
 N2
 ```
 
-## Sample size table 
+#Q1:  Sample size table 
 
 ```{r}
 sens_samp_tib = expand_grid(p2 = c(0.01,0.03,0.05),
