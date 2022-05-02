@@ -15,6 +15,7 @@ library(gtsummary)
 library(mice)
 library(flexsurv)
 library(xtable)
+library(rlist)
 data= readxl::read_excel("Q2b.xlsx")
 baseline = readxl::read_excel("Q2b_BL.xlsx")
 data_all = left_join(data, baseline, by = "ID") %>% 
@@ -310,57 +311,40 @@ plot(exp1, xlab = "Last FU time", ylab = "survival probability",
     main = "KM and exponential estimates of survival curve")
 # median menopause time ----
 ## summary(exp1) #get the estimate and ci tab
-summary(exp1, type = "quantile", quantiles = 0.5)
-exp_med_sum = round(summary(exp1, type = "quantile", quantiles = 0.5)[[1]],2)
-exp_med_ci = paste(exp_med_sum[2], "(", exp_med_sum[3], ",", exp_med_sum[4],")", sep = "")
-```
-
-```{r}
-KM1=survfit(Surv(last_fu_time, infection)~1, data = surv_data, conf.type='log')
-plot(KM1, conf.int = T, mark.time = TRUE,xlab="Last fu time", ylab="survival probability", main="K-M curve", cex.lab=1.5, cex.main=1.5)
-# obtain survival rate at given time, with CI
-summary(KM1) 
-# median survival time, with CI
-print(KM1)
-```
 
 
-```{r}
-# mode2----
-exp1 <- flexsurvreg(Surv(last_fu_time, infection) ~ 1,
+exp1 <- flexsurvreg(Surv(enrollment_time,last_fu_time, infection) ~ 1,
                     data = surv_data,
                     dist = "exp")  # S(t)=e^{-rate*t} 
-plot(exp1, xlab = "Last FU time", ylab = "survival probability",
-    main = "KM and exponential estimates of survival curve")
-# median menopause time ----
-## summary(exp1) #get the estimate and ci tab
-summary(exp1, type = "quantile", quantiles = 0.5)
-exp_med_sum = round(summary(exp1, type = "quantile", quantiles = 0.5)[[1]],2)
-exp_med_ci = paste(exp_med_sum[2], "(", exp_med_sum[3], ",", exp_med_sum[4],")", sep = "")
-```
-
-```{r}
-# mode2----
-weib1 <- flexsurvreg(Surv(enrollment_time,last_fu_time, infection) ~ 1,
+weib1 <- flexsurvreg(Surv(enrollment_time, last_fu_time, infection) ~ 1,
                     data = surv_data,
-                    dist = "weibull")  # S(t)=e^{-rate*t} 
-plot(weib1, xlab = "Last FU time", ylab = "survival probability",
-    main = "KM and weib estimates of survival curve")
-# median menopause time ----
-## summary(exp1) #get the estimate and ci tab
-summary(weib1, type = "quantile", quantiles = 0.5)
-weib_med_sum = round(summary(weib1, type = "quantile", quantiles = 0.5)[[1]],2)
-weib_med_ci = paste(weib_med_sum[2], "(", weib_med_sum[3], ",", weib_med_sum[4],")", sep = "")
+                    dist = "weibull") 
+
+exp1_sum = summary(exp1, type = "quantile", quantiles = 0.5)
+weib1_sum = summary(exp1, type = "quantile", quantiles = 0.5)
 ```
 
 ```{r}
-KM1=survfit(Surv(last_fu_time, infection)~1, data = surv_data, conf.type='log')
+KM1=survfit(Surv(enrollment_time,last_fu_time, infection)~1, data = surv_data, conf.type='log')
 plot(KM1, conf.int = T, mark.time = TRUE,xlab="Last fu time", ylab="survival probability", main="K-M curve", cex.lab=1.5, cex.main=1.5)
 # obtain survival rate at given time, with CI
-summary(KM1) 
+tmp = summary(KM1, time = 360)
+xtable(as.data.frame(tmp[c("time", "n.risk", "n.event", "surv", "std.err", "lower", "upper")]))
 # median survival time, with CI
 print(KM1)
 ```
+
+```{r}
+median_tib = as_tibble(rbind(unclass(exp1_sum)[[1]],
+                unclass(weib1_sum)[[1]],
+                rep(NA,4))) %>% 
+  select(-quantile) %>% 
+  mutate(par_fitting = c("Exponential","Weibull","K-M")) %>% 
+  select(par_fitting, everything())
+
+xtable(median_tib)
+```
+
 
 
 
