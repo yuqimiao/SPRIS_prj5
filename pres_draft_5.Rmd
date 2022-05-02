@@ -1,7 +1,7 @@
 ---
 title: |
   | P9185 - Project 5: 
-  | Protocal design and analysis for COVID-19
+  | protocol design and analysis for COVID-19
 author: |
   | Yuqi Miao, Zexi Cai
 date: "2022-05-02"
@@ -33,7 +33,7 @@ data_all = left_join(data, baseline, by = "ID") %>%
 
 # Outline
 
-* Vaccine efficacy protocal
+* Vaccine efficacy protocol
 * Adverse effect analysis for Vaccine v.s. Control
 * Survival analysis COVID contraction after vaccine shot
 
@@ -45,7 +45,7 @@ data_all = left_join(data, baseline, by = "ID") %>%
 
 * Vaccines are urgently needed to reduce the morbidity and mortality associated with Covid-19. 
 
-# Vaccine efficacy protocal
+# Vaccine efficacy protocol
 
 * A pharmaceutical company therefore would like to conduct a phase III randomized (**1-to-1 ratio**), **stratified**, observer-blinded, placebo-controlled trial at **100 U.S. sites** to demonstrate the efficacy for their developing vaccine. 
 
@@ -55,56 +55,86 @@ $$
     VE = 1-\frac{p_1}{p_2}
 $$
 
-* $p_i$ : the number of new cases during 14-28 days over the total number at risk during 14-28 days in group i
+* $p_i$ : the number of new cases during 12 months over the total number at risk during 12 months in group i
 * $x_i$ cases in group i with $n_i$ samples
 
 * Goal: test the null hypothesis that the vaccine efficacy is 30% or less and provide 80% power to detect a 60% vaccine efficacy without planned interim analyses
 
-# Vaccine efficacy protocal -- randomization procedure
+# Vaccine efficacy protocol -- randomization procedure
 
 * The study consists of **2 periods** :
   * vaccine period for 2 injections
   * follow up period: 
     * second injection - 14 days: if the subjects have symptoms/being positive at this period, regard as not at risk and will not contribute to the efficacy calculation
-    * 14-28 days: follow up period,
+    * 12 months: follow up period,
     
-# Vaccine efficacy protocal -- randomization procedure
+# Vaccine efficacy protocol -- randomization procedure
 
 * collect study subjects with seronegative at baseline $N_0$
 * take 2 covid shots 
 * collect status at day 14 after second shot
 * remove those becoming positive during the 14 days
-* Count new cases during 14-28 days
+* Count new cases during 12 months
 
-# Vaccine efficacy protocal -- randomization procedure
+# Vaccine efficacy protocol -- randomization procedure
 
 * Blinding and Randomization procedure
-  * The primary blind codes are the group codes, and each vaccine number is the investigational vaccine or control vaccine corresponding to the research number, which is represented by different letters. 
-  * The secondary blind codes will uncover the final blind codes, i.e. the vaccine name represented by letters, and the low-dose, medium-dose and high-dose investigational vaccine or control vaccine.
-  * Use random number generating process in R(?) to generate random codes 
-*  A stratified block randomization method was used, with study site as the stratification factor and block size in each stratum of 15. 
+  * The Phase III clinical trial will be conducted in multicenter, randomized, stratified, observer-blinded, and placebo-controlled design
+  * There are 100 participating centers in the US
+  * Eligible participants are those aged 16 years or older who tested seronegative for SARS-CoV-2 at the recruitment time
+  * We stratify the participants by age and gender, and randomly assigned persons in each stratification in a 1:1 ratio to receive either two doses of vaccines or placebo
+  * They will be monitored for 12 months by active surveillance of COVID-19.
+  * The trial is observer-blinded to avoid introducing bias, i.e, the participants and those responsible for the evaluation are blinded to the treatment group
 
-# Vaccine efficacy protocal -- analysis approach
+# Vaccine efficacy protocol -- analysis approach
 
 * $H_0:VE\leq30\%, H_1: VE>30\%$
-* parameters:
 * Test stat: 
 
-$$
-Z_L=(\log\hat R-\log R_0)/ \hat \sigma \sim N(0,1)
-$$
-* Rejection rule: [add]
+\[
+    Z = \frac{\phi_0 \widehat{p}_2 - \widehat{p}_1}{\sqrt{\frac{\widetilde{p}_1(1-\widetilde{p}_1)}{n_1} + \phi_0^2 \frac{\widetilde{p}_2(1-\widetilde{p}_2)}{n_2}}},
+\]
+where
+\[
+    \phi_0 = 1 - \mathrm{VE}_0, 
+    \qquad 
+    \widehat{p}_1 = \frac{x_1}{n_1},
+    \qquad 
+    \widehat{p}_2 = \frac{x_2}{n_2},
+\]
+and $\widetilde{p}_1$ and $\widetilde{p}_2$ are the maximum likelihood estimates under the null hypothesis, calculated by
+\[
+    \widetilde{p}_1 = \phi_0 \widetilde{p}_2,
+    \qquad 
+    \widetilde{p}_2 = \frac{-B - \sqrt{B^2 - 4AC}}{2A},
+\]
+where
+\[
+    A = (n_1+n_2) \phi_0,
+    \qquad 
+    B = -(n_1 \phi_0 + x_1 + n_2 + x_2 \phi_0),
+    \qquad 
+    C = x_1 + x_2,
+\]
+and we reject the null hypothesis if $Z > Z_\alpha$, the upper $\alpha$-th percentile of a standard normal distribution.
 
-# Vaccine efficacy protocal -- sample size calculation
+# Vaccine efficacy protocol -- sample size calculation
+To detect a vaccine efficacy of $\mathrm{VE}_1 = 0.6$ (or vaccine event probability of $p_{1} = 0.4 p_2$) with $1 - \beta = 80\%$ power, we assume that $n_1 = n_2$, and the number of subjects needed will be determined by the following formula:
+\[
+    N = \frac{(Z_{\alpha}[\phi_0 p_2(1-\phi_0 p_2)/0.5 + \phi_0^2 p_2(1-p_2)/0.5]^{1/2}+Z_\beta[p_1(1-p_1)/0.5 + \phi_0^2 p_2(1-p_2)/0.5]^{1/2})^2}{(\phi_0 p_2 - p_{1})^2}.
+\]
 
-$$
-N=(Z_\alpha+Z_\beta)^2\frac{q_1/kp_1+q_2/(1-k)p_2}{(\log R_0-\log R)^2}
-$$
-
-```{r}
-load("sens_samp_tib.Rdata")
-knitr::kable(sens_samp_tib, type = "latex")
-```
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|cccccccccc}
+   & 0.01 & 0.02 & 0.03 & 0.04 & 0.05 & 0.06 & 0.07 & 0.08 & 0.09 & 0.10 \\\hline
+  0.00 & 18952 & 9400 & 6216 & 4624 & 3668 & 3032 & 2578 & 2236 & 1970 & 1758 \\
+  0.05 & 19950 & 9894 & 6544 & 4868 & 3862 & 3192 & 2712 & 2354 & 2074 & 1850 \\
+  0.10 & 21058 & 10444 & 6906 & 5138 & 4076 & 3368 & 2864 & 2484 & 2190 & 1954 \\
+  0.15 & 22296 & 11058 & 7312 & 5440 & 4316 & 3568 & 3032 & 2630 & 2318 & 2068 \\
+  0.20 & 23690 & 11750 & 7770 & 5780 & 4586 & 3790 & 3222 & 2794 & 2464 & 2198 \\
+\end{tabular}
+\end{table}
 
 
 # Adverse effect analysis for Vaccine v.s. Control
