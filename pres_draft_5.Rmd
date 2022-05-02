@@ -37,7 +37,7 @@ data_all = left_join(data, baseline, by = "ID") %>%
 * Adverse effect analysis for Vaccine v.s. Control
 * Survival analysis COVID contraction after vaccine shot
 
-# Backgroud
+# Background
 
 * Coronavirus, the severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2), has had devastating consequences globally. 
 
