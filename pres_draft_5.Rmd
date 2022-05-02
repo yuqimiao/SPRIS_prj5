@@ -63,17 +63,17 @@ $$
 # Vaccine efficacy protocol -- randomization procedure
 
 * The study consists of **2 periods** :
-  * vaccine period for 2 injections
-  * follow up period: 
-    * second injection - 14 days: if the subjects have symptoms/being positive at this period, regard as not at risk and will not contribute to the efficacy calculation
+  * Vaccine period for 2 injections
+  * Follow up period: 
+    * Second injection - 14 days: if the subjects have symptoms/being positive at this period, regard as not at risk and will not contribute to the efficacy calculation
     * 12 months: follow up period,
     
 # Vaccine efficacy protocol -- randomization procedure
 
-* collect study subjects with seronegative at baseline $N_0$
-* take 2 covid shots 
-* collect status at day 14 after second shot
-* remove those becoming positive during the 14 days
+* Collect study subjects with seronegative at baseline $N_0$
+* Take 2 covid shots 
+* Collect status at day 14 after second shot
+* Remove those becoming positive during the 14 days
 * Count new cases during 12 months
 
 # Vaccine efficacy protocol -- randomization procedure
@@ -94,14 +94,8 @@ $$
 \[
     Z = \frac{\phi_0 \widehat{p}_2 - \widehat{p}_1}{\sqrt{\frac{\widetilde{p}_1(1-\widetilde{p}_1)}{n_1} + \phi_0^2 \frac{\widetilde{p}_2(1-\widetilde{p}_2)}{n_2}}},
 \]
-where
-\[
-    \phi_0 = 1 - \mathrm{VE}_0, 
-    \qquad 
-    \widehat{p}_1 = \frac{x_1}{n_1},
-    \qquad 
-    \widehat{p}_2 = \frac{x_2}{n_2},
-\]
+
+where $\phi_0 = 1 - \mathrm{VE}_0, \widehat{p}_1 = \frac{x_1}{n_1},\widehat{p}_2 = \frac{x_2}{n_2},$
 and $\widetilde{p}_1$ and $\widetilde{p}_2$ are the maximum likelihood estimates under the null hypothesis, calculated by
 \[
     \widetilde{p}_1 = \phi_0 \widetilde{p}_2,
@@ -120,9 +114,8 @@ and we reject the null hypothesis if $Z > Z_\alpha$, the upper $\alpha$-th perce
 
 # Vaccine efficacy protocol -- sample size calculation
 To detect a vaccine efficacy of $\mathrm{VE}_1 = 0.6$ (or vaccine event probability of $p_{1} = 0.4 p_2$) with $1 - \beta = 80\%$ power, we assume that $n_1 = n_2$, and the number of subjects needed will be determined by the following formula:
-\[
-    N = \frac{(Z_{\alpha}[\phi_0 p_2(1-\phi_0 p_2)/0.5 + \phi_0^2 p_2(1-p_2)/0.5]^{1/2}+Z_\beta[p_1(1-p_1)/0.5 + \phi_0^2 p_2(1-p_2)/0.5]^{1/2})^2}{(\phi_0 p_2 - p_{1})^2}.
-\]
+
+![](sample_size.png)
 
 \begin{table}[ht]
 \centering
@@ -134,12 +127,13 @@ To detect a vaccine efficacy of $\mathrm{VE}_1 = 0.6$ (or vaccine event probabil
   0.15 & 22296 & 11058 & 7312 & 5440 & 4316 & 3568 & 3032 & 2630 & 2318 & 2068 \\
   0.20 & 23690 & 11750 & 7770 & 5780 & 4586 & 3790 & 3222 & 2794 & 2464 & 2198 \\
 \end{tabular}
+\caption{Sample size calculation changing missing rate(row) and control prevalence(column)}
 \end{table}
 
 
 # Adverse effect analysis for Vaccine v.s. Control
 
-![](Descrip_table.png)
+![Descriptive Table](Descrip_table.png)
 
 # Adverse effect analysis for Vaccine v.s. Control
 
@@ -186,6 +180,7 @@ GLM: missing_id ~ sae+sex+age+site+time
 \end{tabular}
 \end{table}
 
+* Missing_id: =0 if no missing follow up, =1 if any missing follow up. 
 * Missing pattern is not related to the outcome;
 * Assuming Missing at random and parameter separability;
 
@@ -194,7 +189,7 @@ GLM: missing_id ~ sae+sex+age+site+time
 
 $$
 \begin{aligned}
-logit(\frac{\pi_{ijk}}{1-\pi_{ijk}})&=\beta_0 \\
+\log(\frac{\pi_{ijk}}{1-\pi_{ijk}})&=\beta_0 \\
 &+\beta_1I(\text{time}==2)_{ijk}+\beta_1I(\text{time}==3)_{ijk} \\
 &+\beta_3I(\text{time}==1)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
 &+\beta_4I(\text{time}==2)_{ijk}\times I(\text{group} == \text{Vaccine})_{ij}\\
@@ -227,6 +222,8 @@ load("fit2.Rdata")
 # pxt(coef(ss)$cond,"conditional fixed effects")
 ```
 
+\begin{table}[ht]
+\centering
 \begin{tabular}{rrrrr}
   \hline
  & Estimate & Std. Error & z value & Pr($>$$|$z$|$) \\ 
@@ -241,8 +238,14 @@ load("fit2.Rdata")
   time3:groupvaccine & 0.04 & 0.28 & 0.15 & 0.88 \\ 
    \hline
 \end{tabular}
+\caption{Fixed effect estimation for adverse effect model}
+\end{table}
 
 # Adverse effect analysis -- ANOVA for time effect
+```{r, include = F}
+# xtable::xtable(car::Anova(fit2))
+```
+
 
 \begin{table}[ht]
 \centering
@@ -256,8 +259,10 @@ time & 0.12 & 2 & 0.9399 \\
   time:group & 4.28 & 3 & 0.2329 \\ 
    \hline
 \end{tabular}
+\caption{Deviance test for adverse effect model}
 \end{table}
 
+* From the Deviance test using Wald chisquare test statistics, we have $T_{interaction}=4.28>\chi^2_{0.05,3}$, P value $>0.05$
 * There is no siginificant difference between odds of having SAE in the vaccine group and control group at any of the three assessment time points.  
 
 # Survival analysis COVID contraction after vaccine shot
@@ -324,10 +329,23 @@ plot(weib1, xlab = "Last FU time",
 
 * The survival rate didn't drop to 50% at the end of the study.
 * Flat tail of the survival curv, both exponential and Weibull distribution can't fit the trend well.
-* Not interpretable parametric model fitting.
-
-
-
-# Survival analysis COVID contraction after vaccine shot
+* Not interpretable parametric model fitting for both median and mean survival time.
 
 # Conclusion and discussion
+
+* A pharmaceutical company therefore would like to conduct a phase III randomized (**1-to-1 ratio**), **stratified**, observer-blinded, placebo-controlled trial is designed with sample size calculation changing missing rate and control prevalence.
+
+* No siginificant difference between odds of having SAE in the vaccine group and control group at any of the three assessment time points. 
+
+* The survival rate didn't drop to 50% at the end of the study. No interpretable estimation of mean and median survival time.
+
+# Resource
+
+Effect of 2 Inactivated SARS-CoV-2 Vaccines on Symptomatic COVID-19 Infection in Adults: A Randomized Clinical Trial | Global Health | JAMA | JAMA Network. (n.d.). Retrieved May 2, 2022, from https://jamanetwork.com/journals/jama/fullarticle/2780562
+
+Farrington, C. P., & Manning, G. (1990). Test statistics and sample size formulae for comparative binomial trials with null hypothesis of non-zero risk difference or non-unity relative risk. Statistics in Medicine, 9(12), 1447–1454. https://doi.org/10.1002/sim.4780091208
+
+Hallstrom, A., & Davis, K. (1988). Imbalance in treatment assignments in stratified blocked randomization. Controlled Clinical Trials, 9(4), 375–382. https://doi.org/10.1016/0197-2456(88)90050-5
+
+Palta, M., & McHugh, R. (1979). Adjusting for losses to follow-up in sample size determination for cohort studies. Journal of Chronic Diseases, 32(4), 315–326. https://doi.org/10.1016/0021-9681(79)90087-0
+
